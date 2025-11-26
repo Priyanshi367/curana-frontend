@@ -17,7 +17,7 @@ export const fetchMenuItems = async (): Promise<MenuResponse> => {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_URL}/menus?populate=*`, {
+    const response = await fetch(`${API_URL}/api/menus?populate=*`, {
       headers,
     });
 

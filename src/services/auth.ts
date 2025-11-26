@@ -51,7 +51,7 @@ export function setStoredUser(user: User) {
 }
 
 export async function login(email: string, password: string): Promise<LoginResponse> {
-  const res = await axios.post(`${API_URL}/auth/local`, {
+  const res = await axios.post(`${API_URL}/api/auth/local`, {
     identifier: email,
     password,
   });
@@ -75,7 +75,7 @@ export async function getMe(token?: string): Promise<User> {
   const authToken = token || getToken();
   if (!authToken) throw new Error('Not authenticated');
   
-  const res = await axios.get(`${API_URL}/users/me?populate=*`, {
+  const res = await axios.get(`${API_URL}/api/users/me?populate=*`, {
     headers: { Authorization: `Bearer ${authToken}` },
   });
   return res.data;

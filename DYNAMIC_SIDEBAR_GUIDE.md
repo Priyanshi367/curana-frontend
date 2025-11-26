@@ -61,7 +61,6 @@ The dynamic menu expects this structure from Strapi:
 The API URL and token are configured in `.env`:
 ```
 VITE_STRAPI_API_URL=http://localhost:1337/api
-VITE_STRAPI_API_TOKEN=your_token_here
 ```
 
 ## Notes

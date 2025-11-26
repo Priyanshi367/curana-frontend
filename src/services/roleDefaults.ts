@@ -26,7 +26,7 @@ export interface RoleDefaultsResponse {
 export async function getRoleDefaultRoute(role: UserRole): Promise<string> {
   try {
     const token = getToken();
-    const res = await axios.get<RoleDefaultsResponse>(`${API_URL}/role-defaults?populate=*`, {
+    const res = await axios.get<RoleDefaultsResponse>(`${API_URL}/api/role-defaults?populate=*`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     
