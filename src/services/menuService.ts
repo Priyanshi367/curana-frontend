@@ -50,3 +50,38 @@ export const fetchMenuForRole = async (userRole: string): Promise<MenuItem[]> =>
   
   return roleFilteredItems;
 };
+
+/**
+ * Update menu order in Strapi
+ */
+export const updateMenuOrder = async (
+  updates: Array<{ id: number; documentId: string; order: number }>
+): Promise<void> => {
+  try {
+    const token = getToken();
+    if (!token) {
+      throw new Error('Authentication required');
+    }
+
+    // Update each menu item
+    const promises = updates.map((update) =>
+      fetch(`${API_URL}/api/menus/${update.documentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          data: {
+            order: update.order,
+          },
+        }),
+      })
+    );
+
+    await Promise.all(promises);
+  } catch (error) {
+    console.error('Error updating menu order:', error);
+    throw error;
+  }
+};

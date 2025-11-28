@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo, useState, useCallback } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import PageBanner from "@/components/PageBanner";
 import bannerOrgChart from "@/assets/banner-org-chart.jpg";
@@ -19,9 +19,18 @@ import "reactflow/dist/style.css";
 import dagre from "@dagrejs/dagre";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 // ---------- Node UI ----------
-type PNodeData = { name: string; role: string; department?: string; image?: string };
+type PNodeData = { 
+  name: string; 
+  role: string; 
+  department?: string; 
+  image?: string;
+  hasChildren?: boolean;
+  isCollapsed?: boolean;
+  onToggle?: () => void;
+};
 
 const PersonRFNode = ({ data }: { data: PNodeData }) => {
   const initials = data.name
@@ -62,6 +71,26 @@ const PersonRFNode = ({ data }: { data: PNodeData }) => {
             </span>
           )}
         </div>
+
+        {/* Collapse/Expand Button */}
+        {data.hasChildren && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              data.onToggle?.();
+            }}
+            className="mt-2 inline-flex items-center justify-center w-6 h-6 rounded-full
+                       bg-[hsl(var(--primary)/0.15)] hover:bg-[hsl(var(--primary)/0.25)]
+                       text-[hsl(var(--primary))] transition-colors"
+            title={data.isCollapsed ? "Expand" : "Collapse"}
+          >
+            {data.isCollapsed ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronUp className="w-4 h-4" />
+            )}
+          </button>
+        )}
       </Card>
     </div>
   );
@@ -118,19 +147,96 @@ function makeLayout(nodesIn: Node[], edgesIn: Edge[], direction: "TB" | "LR" = "
 
 // ---------- Page ----------
 export default function OrganizationChartFlow() {
+  // Set the center node (change this to focus on different nodes)
+  const [centerNodeId] = useState<string>("ceo");
+  
+  // Initialize with all non-immediate children collapsed
+  const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(() => {
+    const collapsed = new Set<string>();
+    const immediateChildren = raw.nodes.filter((n) => n.parent === centerNodeId).map((n) => n.id);
+    
+    // Collapse all grandchildren and beyond
+    immediateChildren.forEach((childId) => {
+      const grandchildren = raw.nodes.filter((n) => n.parent === childId);
+      if (grandchildren.length > 0) {
+        collapsed.add(childId);
+      }
+    });
+    
+    return collapsed;
+  });
+
+  // Toggle collapse/expand for a node
+  const toggleNode = useCallback((nodeId: string) => {
+    setCollapsedNodes((prev) => {
+      const next = new Set(prev);
+      if (next.has(nodeId)) {
+        next.delete(nodeId);
+      } else {
+        next.add(nodeId);
+      }
+      return next;
+    });
+  }, []);
+
+  // Get all descendants of a node
+  const getDescendants = useCallback((nodeId: string): string[] => {
+    const children = raw.nodes.filter((n) => n.parent === nodeId).map((n) => n.id);
+    const descendants = [...children];
+    children.forEach((childId) => {
+      descendants.push(...getDescendants(childId));
+    });
+    return descendants;
+  }, []);
+
   const { nodesInitial, edgesInitial } = useMemo(() => {
-    const nodes: Node[] = raw.nodes.map((n) => ({
-      id: n.id,
-      type: "person",
-      data: n.data,
-      position: { x: 0, y: 0 },
-      draggable: true,
-      sourcePosition: Position.Bottom,
-      targetPosition: Position.Top
-    }));
+    // Determine which nodes to show
+    const visibleNodeIds = new Set<string>();
+    
+    // Always show all nodes initially, but we'll filter based on collapsed state
+    raw.nodes.forEach((n) => {
+      // Check if any ancestor is collapsed
+      let current = n.parent;
+      let shouldShow = true;
+      
+      while (current) {
+        if (collapsedNodes.has(current)) {
+          shouldShow = false;
+          break;
+        }
+        const parentNode = raw.nodes.find((node) => node.id === current);
+        current = parentNode?.parent || null;
+      }
+      
+      if (shouldShow) {
+        visibleNodeIds.add(n.id);
+      }
+    });
+
+    const nodes: Node[] = raw.nodes
+      .filter((n) => visibleNodeIds.has(n.id))
+      .map((n) => {
+        const hasChildren = raw.nodes.some((child) => child.parent === n.id);
+        const isCollapsed = collapsedNodes.has(n.id);
+
+        return {
+          id: n.id,
+          type: "person",
+          data: {
+            ...n.data,
+            hasChildren,
+            isCollapsed,
+            onToggle: () => toggleNode(n.id)
+          },
+          position: { x: 0, y: 0 },
+          draggable: true,
+          sourcePosition: Position.Bottom,
+          targetPosition: Position.Top
+        };
+      });
 
     const edges: Edge[] = raw.nodes
-      .filter((n) => n.parent)
+      .filter((n) => n.parent && visibleNodeIds.has(n.id) && visibleNodeIds.has(n.parent))
       .map((n) => ({
         id: `${n.parent}-${n.id}`,
         source: n.parent as string,
@@ -141,7 +247,7 @@ export default function OrganizationChartFlow() {
       }));
 
     return { nodesInitial: nodes, edgesInitial: edges };
-  }, []);
+  }, [collapsedNodes, toggleNode]);
 
   const { nodes: laidNodes, edges: laidEdges } = useMemo(
     () => makeLayout(nodesInitial, edgesInitial, "TB"),
@@ -155,6 +261,10 @@ export default function OrganizationChartFlow() {
     <DashboardLayout>
       <div className="max-w-[1600px] mx-auto">
         <PageBanner title="Organization Chart" backgroundImage={bannerOrgChart} />
+
+        <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
+          <span>💡 Click the chevron buttons on nodes to expand/collapse their children</span>
+        </div>
 
         <div
           className="rounded-2xl overflow-hidden border border-[hsl(var(--primary)/0.15)]

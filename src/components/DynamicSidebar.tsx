@@ -9,13 +9,19 @@ import { useDynamicMenu } from '@/hooks/useDynamicMenu';
 import { MenuItem } from '@/types/menu';
 import { getIconComponent } from '@/utils/iconMapping';
 import { getStoredUser } from '@/services/auth';
+import { AdminMenuEditor } from '@/components/AdminMenuEditor';
+import { AdminMenuEditorButton } from '@/components/AdminMenuEditorButton';
 
 const DynamicSidebar = () => {
   const { isCollapsed, toggleSidebar } = useSidebar();
   const { toggleLayout } = useLayout();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
-  const { menuItems, loading, error } = useDynamicMenu();
+  const [showMenuEditor, setShowMenuEditor] = useState(false);
+  const { menuItems, loading, error, refreshMenu } = useDynamicMenu();
   const user = getStoredUser();
+  
+  // Check if user is admin
+  const isAdmin = user?.role?.type === 'admin' || user?.role?.name?.toLowerCase() === 'admin';
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -229,47 +235,25 @@ const DynamicSidebar = () => {
           )}
         </nav>
 
-        {/* Layout Toggle Button */}
-        {/* <div className="p-2 border-t border-border/30 space-y-1">
-          <TooltipProvider delayDuration={0}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={toggleLayout}
-                  className={`w-full flex items-center justify-center rounded-lg p-2.5 transition-colors hover:bg-primary/10 ${
-                    isCollapsed ? 'justify-center' : 'justify-start gap-3'
-                  }`}
-                  title="Switch to horizontal layout"
-                >
-                  <svg
-                    className="h-5 w-5 text-sidebar-foreground"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 6h16M4 12h16M4 18h16"
-                    />
-                  </svg>
-                  {!isCollapsed && (
-                    <span className="text-sm font-medium text-sidebar-foreground">
-                      Horizontal Layout
-                    </span>
-                  )}
-                </button>
-              </TooltipTrigger>
-              {isCollapsed && (
-                <TooltipContent side="right" className="ml-2 z-[100]">
-                  <p>Switch to horizontal layout</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
-        </div> */}
+        {/* Admin Menu Editor Button */}
+        {isAdmin && (
+          <AdminMenuEditorButton
+            onClick={() => setShowMenuEditor(true)}
+            isCollapsed={isCollapsed}
+          />
+        )}
       </aside>
+
+      {/* Admin Menu Editor Modal */}
+      {showMenuEditor && (
+        <AdminMenuEditor
+          menuItems={menuItems}
+          onClose={() => setShowMenuEditor(false)}
+          onSave={() => {
+            refreshMenu();
+          }}
+        />
+      )}
     </>
   );
 };

@@ -8,7 +8,7 @@ export interface RoleDefault {
   id: number;
   documentId: string;
   role: UserRole;
-  menu: {
+  menus: {
     id: number;
     documentId: string;
     title: string;
@@ -31,7 +31,8 @@ export async function getRoleDefaultRoute(role: UserRole): Promise<string> {
     });
     
     const roleDefault = res.data.data.find(rd => rd.role === role);
-    return roleDefault?.menu?.url || '/dashboard';
+    console.log(roleDefault,'roleDefaultroleDefault')
+    return roleDefault?.menus?.[0]?.url || '/dashboard';
   } catch (error) {
     console.error('Failed to fetch role defaults:', error);
     return '/dashboard';

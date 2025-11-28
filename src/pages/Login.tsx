@@ -23,6 +23,7 @@ const Login = () => {
       
       // Get user role and redirect to role-specific default page
       const userRole = getUserRole();
+      console.log(userRole,'userRoleuserRole')
       if (userRole) {
         const defaultRoute = await getRoleDefaultRoute(userRole);
 

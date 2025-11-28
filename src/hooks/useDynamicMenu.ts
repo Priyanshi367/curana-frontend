@@ -14,6 +14,7 @@ export function useDynamicMenu() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const loadingRef = useRef(false);
 
   useEffect(() => {
@@ -31,11 +32,11 @@ export function useDynamicMenu() {
           throw new Error('User role not found. Please log in again.');
         }
 
-        // Check if we have a recent cached version
+        // Check if we have a recent cached version (skip cache if refreshTrigger changed)
         const cachedMenu = menuCache[userRole];
         const now = Date.now();
         
-        if (cachedMenu && (now - cachedMenu.timestamp) < CACHE_DURATION) {
+        if (refreshTrigger === 0 && cachedMenu && (now - cachedMenu.timestamp) < CACHE_DURATION) {
           console.log('📦 Using cached menu for role:', userRole);
           setMenuItems(cachedMenu.items);
           return;
@@ -70,17 +71,15 @@ export function useDynamicMenu() {
     };
 
     loadMenu();
-  }, []);
+  }, [refreshTrigger]);
 
-  // Function to manually refresh the menu if needed
+  // Function to manually refresh the menu
   const refreshMenu = () => {
     const userRole = getUserRole();
     if (userRole && menuCache[userRole]) {
       delete menuCache[userRole];
     }
-    // This will trigger a reload since the effect will run again
-    setMenuItems([]);
-    setLoading(true);
+    setRefreshTrigger(prev => prev + 1);
   };
 
   return { menuItems, loading, error, refreshMenu };

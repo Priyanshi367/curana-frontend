@@ -1,6 +1,6 @@
 // Menu types for Strapi v4 dynamic menu system
 
-export type UserRole = 'provider' | 'health_plan_user' | 'corporate' | 'all';
+export type UserRole = 'provider' | 'health_plan_user' | 'corporate' | 'admin' | 'all';
 
 export interface VisibleRole {
   id: number;
